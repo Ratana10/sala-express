@@ -1,6 +1,14 @@
-const express = require("express");
-const app = express();
-const port = 3000;
+const express = require('express')
+const db = require("./models")
+const app = express()
+const port = 3000
+
+db.sequelize
+.authenticate()
+.then(()=> console.log("Database connected successfully"))
+.catch((err) => console.log("Unable connect to database", err))
+
+
 const products = [
   {
     id: 1,
@@ -22,38 +30,37 @@ app.get("/products", (req, res) => {
 app.post("/products", (req, res) => {
   // Business logic
 
-  res.send("Product created successfully");
-});
+  res.send("Product created successfully")
+})
 
-const db = require("./models");
-
-const { User } = require("./models/index");
-
-app.get("/users", async (req, res) => {
-  const users = await User.findAll();
-  res.json({
-    message: "Users get successfully",
-    data: users,
-  });
-});
+const { Category } = require('./models')
 
 app.use(express.json())
 
-app.post("/users", async (req, res) => {
-  const { firstName, lastName, email } = req.body;
-  const created = await User.create({ firstName, lastName, email });
+app.post("/api/v1/categories", async (req, res) => {
+  // Business logic
+
+  const name = req.body.name
+  const isActive = req.body.isActive
+
+ const created =  await Category.create({ name, isActive })
+
   res.json({
-    message: "User created successfully",
-    data: created,
-  });
-});
+    message: "Category created successfully",
+    data: created
+  })
+})
 
+app.get("/api/v1/categories", async (req, res) => {
 
+ const categories =  await Category.findAll()
 
-db.sequelize
-  .authenticate()
-  .then(() => console.log("Database connected successfully!"))
-  .catch((err) => console.error("Unable to connect to the database:", err));
+  res.json({
+    message: "Category fetched successfully",
+    data: categories
+  })
+})
+
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
