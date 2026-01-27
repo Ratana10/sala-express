@@ -1,5 +1,9 @@
 const express = require("express");
 const db = require("./models");
+const authRoute = require("./src/routes/auth");
+const customerRoute = require("./src/routes/customer");
+const authMiddleware = require("./src/middlewares/authMiddleware");
+
 const app = express();
 const port = 3000;
 const { Category, Product, Customer, Order, OrderDetail } = require("./models");
@@ -10,6 +14,10 @@ db.sequelize
   .authenticate()
   .then(() => console.log("Database connected successfully"))
   .catch((err) => console.log("Unable connect to database", err));
+
+app.use("/api/v1/auth", authRoute);
+app.use("/api/v1/customers", authMiddleware, customerRoute)
+
 
 app.post("/api/v1/orders", async (req, res) => {
   try {
@@ -142,7 +150,7 @@ app.post("/api/v1/products", async (req, res) => {
   }
 });
 
-app.post("/api/v1/categories", async (req, res) => {
+app.post("/api/v1/categories", authMiddleware, async (req, res) => {
   // Business logic
 
   const name = req.body.name;
@@ -156,7 +164,7 @@ app.post("/api/v1/categories", async (req, res) => {
   });
 });
 
-app.get("/api/v1/categories", async (req, res) => {
+app.get("/api/v1/categories", authMiddleware, async (req, res) => {
   const categories = await Category.findAll({
     include: [
       {
