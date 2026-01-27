@@ -4,12 +4,20 @@ const app = express();
 const port = 3000;
 const { Category, Product, Customer, Order, OrderDetail } = require("./models");
 
+const authRouter = require("./src/routes/auth");
+const customerRouter = require("./src/routes/customer");
+
+const authMiddleware = require("./src/middlewares/authMiddleware");
+
 app.use(express.json());
 
 db.sequelize
   .authenticate()
   .then(() => console.log("Database connected successfully"))
   .catch((err) => console.log("Unable connect to database", err));
+
+app.use("/api/v1/auth", authRouter);
+app.use("/api/v1/customers", authMiddleware, customerRouter);
 
 app.post("/api/v1/orders", async (req, res) => {
   try {
