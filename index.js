@@ -1,15 +1,52 @@
 const express = require("express");
 const db = require("./models");
+const fileUpload = require("express-fileupload");
+
 const app = express();
 const port = 3000;
 const { Category, Product, Customer, Order, OrderDetail } = require("./models");
 
 app.use(express.json());
+app.use(fileUpload());
 
 db.sequelize
   .authenticate()
   .then(() => console.log("Database connected successfully"))
   .catch((err) => console.log("Unable connect to database", err));
+
+app.post("/api/v1/upload", function (req, res) {
+  // When a file has been uploaded
+  //Checks whether a file exists
+  // 	req.files comes from middleware like express-fileupload
+  if (req.files && Object.keys(req.files).length !== 0) {
+    //ensures at least one file was uploaded
+    // Uploaded path
+    const uploadedFile = req.files.file;
+
+    // Logging uploading file
+    console.log(uploadedFile);
+
+    // Upload path
+    const uploadPath = __dirname + "/uploads/" + uploadedFile.name;
+
+    // To save the file using mv() function
+    uploadedFile.mv(uploadPath, function (err) {
+      if (err) {
+        console.log(err);
+        res.send("Failed !!");
+      } else res.send("Successfully Uploaded !!");
+    });
+  } else res.send("No file uploaded !!");
+});
+
+app.get("/api/v1/download", function (req, res) {
+  // The res.download() talking file path to be downloaded
+  res.download(__dirname + "/uploads/file.xlsx", function (err) {
+    if (err) {
+      console.log(err);
+    }
+  });
+});
 
 app.post("/api/v1/orders", async (req, res) => {
   try {
