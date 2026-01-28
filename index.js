@@ -2,6 +2,8 @@ const express = require("express");
 const db = require("./models");
 const authRoute = require("./src/routes/auth");
 const customerRoute = require("./src/routes/customer");
+const userRoute = require("./src/routes/user");
+
 const authMiddleware = require("./src/middlewares/authMiddleware");
 
 const app = express();
@@ -17,6 +19,8 @@ db.sequelize
 
 app.use("/api/v1/auth", authRoute);
 app.use("/api/v1/customers", authMiddleware, customerRoute)
+
+app.use("/api/v1/users", userRoute)
 
 
 app.post("/api/v1/orders", async (req, res) => {
