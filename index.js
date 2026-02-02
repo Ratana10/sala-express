@@ -3,6 +3,9 @@ const db = require("./models");
 const authRoute = require("./src/routes/auth");
 const customerRoute = require("./src/routes/customer");
 const userRoute = require("./src/routes/user");
+const productRoute = require("./src/routes/product");
+
+const fileUpload = require("express-fileupload");
 
 const authMiddleware = require("./src/middlewares/authMiddleware");
 
@@ -11,6 +14,12 @@ const port = 3000;
 const { Category, Product, Customer, Order, OrderDetail } = require("./models");
 
 app.use(express.json());
+app.use(
+  fileUpload({
+    limits: { fileSize: 30 * 1024 * 1024 }, // 30MB
+    createParentPath: true,
+  }),
+);
 
 db.sequelize
   .authenticate()
@@ -18,10 +27,10 @@ db.sequelize
   .catch((err) => console.log("Unable connect to database", err));
 
 app.use("/api/v1/auth", authRoute);
-app.use("/api/v1/customers", authMiddleware, customerRoute)
+app.use("/api/v1/customers", authMiddleware, customerRoute);
 
-app.use("/api/v1/users", userRoute)
-
+app.use("/api/v1/users", userRoute);
+app.use("/api/v1/products", productRoute);
 
 app.post("/api/v1/orders", async (req, res) => {
   try {
