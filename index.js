@@ -1,5 +1,8 @@
 const express = require("express");
 const db = require("./models");
+const path = require("path");
+
+
 const authRoute = require("./src/routes/auth");
 const customerRoute = require("./src/routes/customer");
 const userRoute = require("./src/routes/user");
@@ -19,6 +22,11 @@ app.use(
     limits: { fileSize: 30 * 1024 * 1024 }, // 30MB
     createParentPath: true,
   }),
+);
+
+app.use(
+  "/uploads/products",
+  express.static(path.join(process.cwd(), "uploads/products"))
 );
 
 db.sequelize

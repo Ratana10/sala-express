@@ -41,6 +41,7 @@ router.post("/:id/upload", async (req, res) => {
     const savedImage = await ProductImage.create({
       productId,
       imageUrl,
+      fileName: file.name
     });
 
     res.json({
@@ -72,7 +73,8 @@ router.get("/images/:imageId/download", async (req, res) => {
       });
     }
 
-    res.download(filePath, fileName);
+    console.log("Image data", image)
+    res.download(filePath, image.fileName);
 
 
   } catch (error) {}
