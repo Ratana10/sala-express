@@ -2,7 +2,6 @@ const express = require("express");
 const db = require("./models");
 const path = require("path");
 
-
 const authRoute = require("./src/routes/auth");
 const customerRoute = require("./src/routes/customer");
 const userRoute = require("./src/routes/user");
@@ -15,6 +14,7 @@ const authMiddleware = require("./src/middlewares/authMiddleware");
 const app = express();
 const port = 3000;
 const { Category, Product, Customer, Order, OrderDetail } = require("./models");
+const { Op, where } = require("sequelize");
 
 app.use(express.json());
 app.use(
@@ -26,7 +26,7 @@ app.use(
 
 app.use(
   "/uploads/products",
-  express.static(path.join(process.cwd(), "uploads/products"))
+  express.static(path.join(process.cwd(), "uploads/products")),
 );
 
 db.sequelize
@@ -132,7 +132,25 @@ app.post("/api/v1/orders", async (req, res) => {
 
 app.get("/api/v1/products", async (req, res) => {
   try {
-    const products = await Product.findAll({
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+
+    const offset = (page - 1) * limit;
+
+    let whereCondition = {};
+    if (req.query.search) {
+      whereCondition.name = {
+        [Op.iLike]: `%${req.query.search}%`,
+      };
+    }
+
+    if (req.query.price) {
+      whereCondition.price = parsePriceQuery(req.query.price);
+    }
+    const { rows: products, count: total } = await Product.findAndCountAll({
+      where: whereCondition,
+      limit,
+      offset,
       include: [
         {
           model: Category,
@@ -140,14 +158,53 @@ app.get("/api/v1/products", async (req, res) => {
         },
       ],
     });
+
+    const totalPages = Math.ceil(total / limit);
     res.json({
       message: "Product fetched successfully",
       data: products,
+      pagination: {
+        total,
+        totalPages,
+        currentPage: page,
+        limit,
+      },
     });
   } catch (error) {
     console.log("Creating product error:", error);
+    res.status(500).json({
+      message: error,
+    });
   }
 });
+
+function parsePriceQuery(priceQuery) {
+  if (!priceQuery) return null;
+  const [operator, value] = priceQuery.split(":");
+  const price = Number(value);
+
+  if (operator === "greater") {
+    return {
+      [Op.gt]: price,
+    };
+  } else if (operator === "greater_equal") {
+    return {
+      [Op.gte]: price,
+    };
+  } else if (operator === "lower") {
+    return {
+      [Op.lt]: price,
+    };
+  } else if (operator === "lower_equal") {
+    return {
+      [Op.lte]: price,
+    };
+  } else if (operator === "equal") {
+    return {
+      [Op.eq]: price,
+    };
+  }
+}
 
 app.post("/api/v1/products", async (req, res) => {
   // const name = req.body.name
