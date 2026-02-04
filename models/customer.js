@@ -11,17 +11,16 @@ module.exports = (sequelize, DataTypes) => {
       // define association here
       Customer.hasMany(models.Order, {
         foreignKey: "customerId",
-        as: "orders"
-      })
+        as: "orders",
+      });
     }
   }
   Customer.init(
     {
       firstName: DataTypes.STRING,
       lastName: DataTypes.STRING,
-      phone: DataTypes.STRING,
       password: DataTypes.STRING,
-      username: DataTypes.STRING,
+      name: DataTypes.STRING,
       email: DataTypes.STRING,
     },
     {
