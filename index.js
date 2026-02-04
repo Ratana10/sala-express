@@ -130,24 +130,6 @@ app.post("/api/v1/orders", async (req, res) => {
   }
 });
 
-app.get("/api/v1/products", async (req, res) => {
-  try {
-    const products = await Product.findAll({
-      include: [
-        {
-          model: Category,
-          as: "category",
-        },
-      ],
-    });
-    res.json({
-      message: "Product fetched successfully",
-      data: products,
-    });
-  } catch (error) {
-    console.log("Creating product error:", error);
-  }
-});
 
 app.post("/api/v1/products", async (req, res) => {
   // const name = req.body.name
