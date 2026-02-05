@@ -7,6 +7,7 @@ const authRoute = require("./src/routes/auth");
 const customerRoute = require("./src/routes/customer");
 const userRoute = require("./src/routes/user");
 const productRoute = require("./src/routes/product");
+const orderRoute = require("./src/routes/order");
 
 const fileUpload = require("express-fileupload");
 
@@ -39,11 +40,13 @@ app.use("/api/v1/customers", authMiddleware, customerRoute);
 
 app.use("/api/v1/users", userRoute);
 app.use("/api/v1/products", productRoute);
+app.use("/api/v1/orders", orderRoute);
+
 
 app.post("/api/v1/orders", async (req, res) => {
   try {
     console.log("Request body", req.body);
-    const { customerId, location, items, discount } = req.body;
+    const { orderNumber, customerId, location, items, discount } = req.body;
 
     const customer = await Customer.findByPk(customerId);
     console.log("Customer", customer);
@@ -87,7 +90,7 @@ app.post("/api/v1/orders", async (req, res) => {
     // Create order into db
     const createdOrder = await Order.create({
       customerId,
-      orderNumber: 4,
+      orderNumber: orderNumber,
       total: total,
       discount: discount,
       orderDate: new Date(),
