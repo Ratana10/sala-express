@@ -8,6 +8,7 @@ const customerRoute = require("./src/routes/customer");
 const userRoute = require("./src/routes/user");
 const productRoute = require("./src/routes/product");
 const orderRoute = require("./src/routes/order");
+const categoryRoute = require("./src/routes/category");
 
 const fileUpload = require("express-fileupload");
 
@@ -63,6 +64,7 @@ app.use("/api/v1/customers", authMiddleware, customerRoute);
 app.use("/api/v1/users", userRoute);
 app.use("/api/v1/products", productRoute);
 app.use("/api/v1/orders", orderRoute);
+app.use("/api/v1/categories", categoryRoute);
 
 app.post("/api/v1/orders", async (req, res) => {
   try {
@@ -159,13 +161,14 @@ app.post("/api/v1/products", async (req, res) => {
   // const price = req.body.price
   // const categroyId = req.body.categroyId
   try {
-    const { name, price, categoryId, isActive } = req.body;
+    const { name, price, categoryId, isActive, qty } = req.body;
 
     const createdProduct = await Product.create({
       name,
       price,
       categoryId,
       isActive,
+      qty,
     });
     res.json({
       message: "Product created successfully",
@@ -176,35 +179,6 @@ app.post("/api/v1/products", async (req, res) => {
   }
 });
 
-app.post("/api/v1/categories", authMiddleware, async (req, res) => {
-  // Business logic
-
-  const name = req.body.name;
-  const isActive = req.body.isActive;
-
-  const created = await Category.create({ name, isActive });
-
-  res.json({
-    message: "Category created successfully",
-    data: created,
-  });
-});
-
-app.get("/api/v1/categories", authMiddleware, async (req, res) => {
-  const categories = await Category.findAll({
-    include: [
-      {
-        model: Product,
-        as: "products",
-      },
-    ],
-  });
-
-  res.json({
-    message: "Category fetched successfully",
-    data: categories,
-  });
-});
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
