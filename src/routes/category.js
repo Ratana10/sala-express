@@ -56,12 +56,11 @@ router.delete("/:id", async (req, res) => {
 });
 
 router.get("", async (req, res) => {
-
-  let whereCondition = {}
-  if(req.query.search){
+  let whereCondition = {};
+  if (req.query.search) {
     whereCondition.name = {
-      [Op.iLike]: `%${req.query.search}%`
-    }
+      [Op.iLike]: `%${req.query.search}%`,
+    };
   }
 
   const categories = await Category.findAll({
@@ -73,6 +72,15 @@ router.get("", async (req, res) => {
       },
     ],
   });
+
+  res.json({
+    message: "Category fetched successfully",
+    data: categories,
+  });
+});
+
+router.get("/list", async (req, res) => {
+  const categories = await Category.findAll();
 
   res.json({
     message: "Category fetched successfully",

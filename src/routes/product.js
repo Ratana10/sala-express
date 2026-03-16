@@ -19,10 +19,10 @@ router.get("/", async (req, res) => {
       };
     }
 
-    if(req.query.categoryId){
+    if (req.query.categoryId) {
       whereCondition.categoryId = {
         [Op.eq]: req.query.categoryId,
-      }
+      };
     }
 
     const offset = (page - 1) * limit;
@@ -53,6 +53,70 @@ router.get("/", async (req, res) => {
     });
   } catch (error) {
     console.log("Creating product error:", error);
+    res.status(500).json({
+      message: "Internal server error",
+    });
+  }
+});
+
+router.post("", async (req, res) => {
+  router; // const name = req.body.name
+  // const price = req.body.price
+  // const categroyId = req.body.categroyId
+  try {
+    const { name, price, categoryId, isActive, qty } = req.body;
+
+    const createdProduct = await Product.create({
+      name,
+      price,
+      categoryId,
+      qty,
+      isActive,
+    });
+    res.json({
+      message: "Product created successfully",
+      data: createdProduct,
+    });
+  } catch (error) {
+    console.log("Creating product error:", error);
+  }
+});
+
+router.put("/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, price, categoryId, isActive, qty } = req.body;
+
+    const product = await Product.findByPk(id);
+    if (!product) {
+      return res.status(404).json({
+        message: `Product id=${id} not found`,
+      });
+    }
+
+    await product.update({
+      name,
+      price,
+      categoryId,
+      qty,
+      isActive,
+    });
+
+    const updatedProduct = await Product.findByPk(id, {
+      include: [
+        {
+          model: Category,
+          as: "category",
+        },
+      ],
+    });
+
+    res.json({
+      message: "Product updated successfully",
+      data: updatedProduct,
+    });
+  } catch (error) {
+    console.log("Updating product error:", error);
     res.status(500).json({
       message: "Internal server error",
     });
