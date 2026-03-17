@@ -31,6 +31,7 @@ router.get("/", async (req, res) => {
       where: whereCondition,
       limit,
       offset,
+      order: [["createdAt", "DESC"]],
       include: [
         {
           model: Category,
