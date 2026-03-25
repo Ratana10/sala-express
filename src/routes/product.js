@@ -13,7 +13,7 @@ router.get("/", async (req, res) => {
     const limit = Number(req.query.limit) || 10;
 
     let whereCondition = {};
- 
+
     if (req.query.search) {
       const search = req.query.search.replace(/\s+/g, "").toLowerCase();
 
@@ -42,6 +42,12 @@ router.get("/", async (req, res) => {
         {
           model: Category,
           as: "category",
+          attributes: ["id", "name"],
+        },
+        {
+          model: ProductImage,
+          as: "productImages",
+          attributes: ["id", "productId", "imageUrl", "fileName"],
         },
       ],
     });
