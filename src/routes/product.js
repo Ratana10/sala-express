@@ -13,7 +13,7 @@ router.get("/", async (req, res) => {
     const limit = Number(req.query.limit) || 10;
 
     let whereCondition = {};
- 
+
     if (req.query.search) {
       const search = req.query.search.replace(/\s+/g, "").toLowerCase();
 
@@ -43,6 +43,7 @@ router.get("/", async (req, res) => {
           model: Category,
           as: "category",
         },
+        { model: ProductImage, as: "productImages" },
       ],
     });
     const totalPages = Math.ceil(total / limit);
@@ -200,5 +201,40 @@ router.get("/images/:imageId/download", async (req, res) => {
     console.log("Image data", image);
     res.download(filePath, image.fileName);
   } catch (error) {}
+});
+
+router.delete("/images/:imageId", async (req, res) => {
+  try {
+    const { imageId } = req.params;
+
+    const image = await ProductImage.findOne({
+      where: {
+        id: imageId,
+      },
+    });
+    if (!image) {
+      return res.status(404).json({
+        message: `Image id=${imageId} not found for product id=${id}`,
+      });
+    }
+    // Delete physical file from disk
+    const fileName = image.imageUrl.split("/").pop();
+    const filePath = path.join(process.cwd(), "uploads/products", fileName);
+
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+
+    // Delete record from database
+    await image.destroy();
+    res.json({
+      message: "Image deleted successfully",
+    });
+  } catch (error) {
+    console.log("Deleting image error:", error);
+    res.status(500).json({
+      message: "Internal server error",
+    });
+  }
 });
 module.exports = router;
