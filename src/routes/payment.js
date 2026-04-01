@@ -3,8 +3,10 @@ const {
   getReqTime,
   buildPurchaseHash,
   encodeBase64,
+  buildCheckTransactionHash,
 } = require("../utils/payway");
 const { Order, Customer, OrderDetail, Payment } = require("../../models");
+const { default: axios } = require("axios");
 
 const router = app.Router();
 
@@ -26,25 +28,25 @@ router.post("/:orderId", async (req, res) => {
     }
 
     //2. Prevent duplicate payment
-    const existingPayment = await Payment.findOne({
+    const payment = await Payment.findOne({
       where: { orderId, status: "PENDING" },
     });
 
-    if (existingPayment) {
-      return res
-        .status(400)
-        .json({ message: "A pending payment already exists for this order" });
-    }
+    let paywayTranId;
 
     //3. Create Payment record
-    const paywayTranId = `ORD-${Date.now()}`;
-    const createdPayment = await Payment.create({
-      orderId: order.id,
-      paywayTranId,
-      amount: order.total,
-      method,
-      status: "PENDING",
-    });
+    if (!payment) {
+      paywayTranId = `ORD-${Date.now()}`;
+      payment = await Payment.create({
+        orderId: order.id,
+        paywayTranId,
+        amount: order.total,
+        method,
+        status: "PENDING",
+      });
+    } else {
+      paywayTranId = payment.paywayTranId;
+    }
 
     //4. Build PayWay payload (only if ABA_PAYWAY)
     if (method !== "ABA_PAYWAY") {
@@ -91,7 +93,7 @@ router.post("/:orderId", async (req, res) => {
     return res.json({
       message: "Payment initiated",
       data: {
-        order: createdPayment,
+        payment,
         payway: {
           action: `${process.env.ABA_PAYWAY_BASE_URL}/api/payment-gateway/v1/payments/purchase`,
           method: "POST",
@@ -112,4 +114,85 @@ router.post("/:orderId", async (req, res) => {
   }
 });
 
+router.post("/:tranId/check-transaction", async (req, res) => {
+  try {
+    const { tranId } = req.params;
+
+    const payment = await Payment.findOne({
+      where: { paywayTranId: tranId },
+    });
+
+    if (!payment) {
+      return res.status(404).json({
+        message: "Payment not found",
+      });
+    }
+
+    const req_time = getReqTime();
+    const merchant_id = process.env.ABA_PAYWAY_MERCHANT_ID;
+    const tran_id = payment.paywayTranId;
+
+    const hash = buildCheckTransactionHash({
+      req_time,
+      merchant_id,
+      tran_id,
+    });
+
+    const response = await axios.post(
+      `${process.env.ABA_PAYWAY_BASE_URL}/api/payment-gateway/v1/payments/check-transaction-2`,
+      {
+        req_time,
+        merchant_id,
+        tran_id,
+        hash,
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      },
+    );
+
+    const abaData = response.data;
+    const statusCode = abaData?.status?.code;
+    const paymentStatusCode = abaData?.data?.payment_status_code;
+    const paymentStatus = abaData?.data?.payment_status;
+
+    if (statusCode == "00") {
+      if (paymentStatusCode === 0 && paymentStatus === "APPROVED") {
+        payment.status = "PAID";
+        payment.paidAt = new Date();
+      } else if (
+        paymentStatus === "DECLINED" ||
+        paymentStatus === "FAILED" ||
+        paymentStatusCode !== 0
+      ) {
+        payment.status = "FAILED";
+      } else {
+        payment.status = "PENDING";
+      }
+
+      payment.remark = JSON.stringify(abaData);
+      await payment.save();
+    }
+
+    return res.json({
+      message: "Transaction checked successfully",
+      data: {
+        localPayment: payment,
+        aba: abaData,
+      },
+    });
+  } catch (error) {
+    console.error(
+      "Check transaction error:",
+      error?.response?.data || error.message,
+    );
+
+    return res.status(500).json({
+      message: "Failed to check transaction",
+      error: error?.response?.data || error.message,
+    });
+  }
+});
 module.exports = router;
