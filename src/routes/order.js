@@ -7,6 +7,15 @@ const {
   Payment,
 } = require("../../models");
 const generateDoc = require("../utils/generateOrderDoc");
+const libre = require("libreoffice-convert");
+
+libre.convertAsync = (buffer, ext, filter) =>
+  new Promise((resolve, reject) => {
+    libre.convert(buffer, ext, filter, (err, done) => {
+      if (err) reject(err);
+      else resolve(done);
+    });
+  });
 
 const router = app.Router();
 
@@ -133,6 +142,44 @@ router.get("/:orderId/generate-doc", async (req, res) => {
     console.error("Error:", error);
     res.status(500).json({
       message: "Internal server error",
+    });
+  }
+});
+
+router.get("/:orderId/generate-pdf", async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    const order = await Order.findByPk(orderId, {
+      include: [
+        { model: Customer, as: "customer" },
+        { model: OrderDetail, as: "orderDetails" },
+      ],
+    });
+
+    if (!order) {
+      return res.status(404).json({
+        message: "Order not found",
+      });
+    }
+
+    // 1. Generate DOCX buffer
+    const docxBuffer = generateDoc(order);
+
+    // 2. Convert to PDF
+    const pdfBuffer = await libre.convertAsync(docxBuffer, ".pdf", undefined);
+
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=order-${order.orderNumber}.pdf`,
+    );
+    res.setHeader("Content-Type", "application/pdf");
+
+    res.send(pdfBuffer);
+  } catch (error) {
+    console.error("PDF conversion error:", error);
+    res.status(500).json({
+      message: "Failed to generate PDF",
     });
   }
 });
