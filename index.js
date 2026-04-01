@@ -9,6 +9,9 @@ const userRoute = require("./src/routes/user");
 const productRoute = require("./src/routes/product");
 const orderRoute = require("./src/routes/order");
 const categoryRoute = require("./src/routes/category");
+const paymentRoute = require("./src/routes/payment");
+
+require('dotenv').config();
 
 const fileUpload = require("express-fileupload");
 
@@ -64,10 +67,8 @@ app.use("/api/v1/customers", authMiddleware, customerRoute);
 app.use("/api/v1/users", authMiddleware, userRoute);
 app.use("/api/v1/products", authMiddleware, productRoute);
 app.use("/api/v1/orders", authMiddleware, orderRoute);
-app.use("/api/v1/categories", authMiddleware ,categoryRoute);
-
-
-
+app.use("/api/v1/categories", authMiddleware, categoryRoute);
+app.use("/api/v1/payments", authMiddleware, paymentRoute);
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);

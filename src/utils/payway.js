@@ -1,4 +1,3 @@
-
 const crypto = require("crypto");
 
 function getReqTime() {
@@ -37,10 +36,10 @@ function buildPurchaseHash(payload) {
     payload.payment_option +
     payload.return_url +
     payload.cancel_url +
+    payload.continue_success_url +
     payload.currency;
 
   return signPayWay(raw);
-
 }
 
 function buildCheckTransactionHash({ req_time, merchant_id, tran_id }) {
@@ -48,9 +47,13 @@ function buildCheckTransactionHash({ req_time, merchant_id, tran_id }) {
   return signPayWay(raw);
 }
 
+const encodeBase64 = async (url) => {
+  return Buffer.from(url).toString("base64")
+}
 
 module.exports = {
   getReqTime,
   buildPurchaseHash,
   buildCheckTransactionHash,
+  encodeBase64
 };
