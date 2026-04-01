@@ -95,6 +95,8 @@ router.post("/:orderId", async (req, res) => {
         payway: {
           action: `${process.env.ABA_PAYWAY_BASE_URL}/api/payment-gateway/v1/payments/purchase`,
           method: "POST",
+          target: "aba_webservice",
+          id: "aba_merchant_request",
           fields: {
             ...paymentPayload,
             hash,
