@@ -32,7 +32,7 @@ function buildPurchaseHash(payload) {
     payload.lastname +
     payload.email +
     payload.phone +
-    payload.type +
+    // payload.type +
     payload.payment_option +
     payload.return_url +
     payload.cancel_url +
@@ -42,18 +42,44 @@ function buildPurchaseHash(payload) {
   return signPayWay(raw);
 }
 
+function buildQrHash(payload) {
+  const raw =
+    payload.req_time +
+    payload.merchant_id +
+    payload.tran_id +
+    payload.amount +
+    payload.items +
+    payload.first_name +
+    payload.last_name +
+    payload.email +
+    payload.phone +
+    payload.purchase_type +
+    payload.payment_option +
+    payload.callback_url +
+    payload.return_deeplink +
+    payload.currency +
+    (payload.custom_fields || "") +
+    (payload.return_params || "") +
+    (payload.payout || "") +
+    (payload.lifetime || "") +
+    (payload.qr_image_template || "");
+
+  return signPayWay(raw);
+}
+
 function buildCheckTransactionHash({ req_time, merchant_id, tran_id }) {
   const raw = req_time + merchant_id + tran_id;
   return signPayWay(raw);
 }
 
-const encodeBase64 = async (url) => {
-  return Buffer.from(url).toString("base64")
-}
+const encodeBase64 = (url) => {
+  return Buffer.from(url).toString("base64");
+};
 
 module.exports = {
   getReqTime,
   buildPurchaseHash,
   buildCheckTransactionHash,
-  encodeBase64
+  encodeBase64,
+  buildQrHash,
 };

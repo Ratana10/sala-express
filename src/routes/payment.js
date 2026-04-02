@@ -4,6 +4,7 @@ const {
   buildPurchaseHash,
   encodeBase64,
   buildCheckTransactionHash,
+  buildQrHash,
 } = require("../utils/payway");
 const { Order, Customer, OrderDetail, Payment } = require("../../models");
 const { default: axios } = require("axios");
@@ -79,9 +80,9 @@ router.post("/:orderId", async (req, res) => {
       lastname: order.customer?.name?.split(" ").slice(1).join(" ") || "NA",
       email: order.customer?.email || "no-email@example.com",
       phone: order.customer?.phone || "000000000",
-      type: "purchase",
+      // type: "purchase",
       view_type: "popup",
-      payment_option: "abapay_khqr",
+      payment_option: "cards",
       return_url: encodedReturnUrl,
       cancel_url: `${process.env.FRONTEND_URL}/payment-cancel`,
       continue_success_url: `${process.env.FRONTEND_URL}/success-url`,
@@ -196,4 +197,106 @@ router.post("/:tranId/check-transaction", async (req, res) => {
     });
   }
 });
+
+router.post("/:orderId/generate-qr", async (req, res) => {
+  const { orderId } = req.params;
+  const { method = "ABA_PAYWAY_QR" } = req.body;
+
+  try {
+    const order = await Order.findByPk(orderId, {
+      include: [
+        { model: Customer, as: "customer" },
+        { model: OrderDetail, as: "orderDetails" },
+      ],
+    });
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    let payment = await Payment.findOne({
+      where: { orderId, status: "PENDING" },
+    });
+
+    let paywayTranId;
+
+    if (!payment) {
+      paywayTranId = `ORD-${Date.now()}`;
+      payment = await Payment.create({
+        orderId: order.id,
+        paywayTranId,
+        amount: order.total,
+        method,
+        status: "PENDING",
+      });
+    } else {
+      paywayTranId = payment.paywayTranId;
+    }
+
+    const req_time = getReqTime();
+
+    const itemsJson = JSON.stringify(
+      (order.orderDetails || []).map((detail) => ({
+        name: detail.productName,
+        quantity: detail.qty,
+        price: Number(detail.productPrice),
+      })),
+    );
+
+    const callbackUrl = `${process.env.BACKEND_URL}/payment/webhook`;
+
+    const qrPayload = {
+      req_time,
+      merchant_id: process.env.ABA_PAYWAY_MERCHANT_ID,
+      tran_id: paywayTranId,
+      first_name: order.customer?.name?.split(" ")[0] || "Customer",
+      last_name: order.customer?.name?.split(" ").slice(1).join(" ") || "NA",
+      email: order.customer?.email || "no-email@example.com",
+      phone: order.customer?.phone || "000000000",
+      amount: Number(order.total).toFixed(2),
+      purchase_type: "purchase",
+      payment_option: "abapay_khqr",
+      items: encodeBase64(itemsJson),
+      currency: "USD",
+      callback_url: encodeBase64(callbackUrl),
+      return_deeplink: "",
+      custom_fields: "",
+      return_params: "",
+      payout: "",
+      lifetime: 30,
+      qr_image_template: "template4_color",
+    };
+
+    const hash = buildQrHash(qrPayload);
+
+    console.log("QR RAW PAYLOAD:", qrPayload);
+    console.log("QR HASH:", hash);
+
+    const abaResponse = await axios.post(
+      `${process.env.ABA_PAYWAY_BASE_URL}/api/payment-gateway/v1/payments/generate-qr`,
+      {
+        ...qrPayload,
+        hash,
+      },
+      {
+        headers: { "Content-Type": "application/json" },
+      },
+    );
+
+    return res.json({
+      message: "QR generated successfully",
+      data: {
+        payment,
+        qr: abaResponse.data,
+      },
+    });
+  } catch (error) {
+    console.error("Generate QR error:", error?.response?.data || error.message);
+    return res.status(500).json({
+      message: "Failed to generate QR",
+      error: error?.response?.data || error.message,
+    });
+  }
+});
+
 module.exports = router;
