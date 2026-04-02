@@ -32,7 +32,7 @@ function buildPurchaseHash(payload) {
     payload.lastname +
     payload.email +
     payload.phone +
-    // payload.type +
+    payload.type +
     payload.payment_option +
     payload.return_url +
     payload.cancel_url +

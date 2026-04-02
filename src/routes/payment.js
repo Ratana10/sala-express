@@ -80,7 +80,7 @@ router.post("/:orderId", async (req, res) => {
       lastname: order.customer?.name?.split(" ").slice(1).join(" ") || "NA",
       email: order.customer?.email || "no-email@example.com",
       phone: order.customer?.phone || "000000000",
-      // type: "purchase",
+      type: "purchase",
       view_type: "popup",
       payment_option: "cards",
       return_url: encodedReturnUrl,
