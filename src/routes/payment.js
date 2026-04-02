@@ -28,7 +28,7 @@ router.post("/:orderId", async (req, res) => {
     }
 
     //2. Prevent duplicate payment
-    const payment = await Payment.findOne({
+    let payment = await Payment.findOne({
       where: { orderId, status: "PENDING" },
     });
 
@@ -86,6 +86,7 @@ router.post("/:orderId", async (req, res) => {
       cancel_url: `${process.env.FRONTEND_URL}/payment-cancel`,
       continue_success_url: `${process.env.FRONTEND_URL}/success-url`,
       currency: "USD",
+      payment_gate: 0,
     };
 
     const hash = buildPurchaseHash(paymentPayload);
