@@ -69,16 +69,16 @@ app.use("/api/v1/categories", authMiddleware ,categoryRoute);
 app.post("/api/v1/orders", async (req, res) => {
   try {
     console.log("Request body", req.body);
-    const { orderNumber, customerId, location, items, discount } = req.body;
+    const { items, discount } = req.body;
 
-    const customer = await Customer.findByPk(customerId);
-    console.log("Customer", customer);
+    // const customer = await Customer.findByPk(customerId);
+    // console.log("Customer", customer);
 
-    if (!customer) {
-      res.json({
-        message: "Customer not found",
-      });
-    }
+    // if (!customer) {
+    //   res.json({
+    //     message: "Customer not found",
+    //   });
+    // }
 
     const orderDetailsData = [];
     let total = 0;
@@ -109,15 +109,15 @@ app.post("/api/v1/orders", async (req, res) => {
     }
 
     console.log("OrderDetails", orderDetailsData);
-
+    const orderNumber = generateInvoiceNumber()
     // Create order into db
     const createdOrder = await Order.create({
-      customerId,
+      customerId: 0,
       orderNumber: orderNumber,
       total: total,
       discount: discount,
       orderDate: new Date(),
-      location,
+      location: "N/A",
     });
 
     console.log("Created order", createdOrder);
@@ -137,10 +137,10 @@ app.post("/api/v1/orders", async (req, res) => {
 
     const completedOrder = await Order.findByPk(createdOrder.id, {
       include: [
-        {
-          model: Customer,
-          as: "customer",
-        },
+        // {
+        //   model: Customer,
+        //   as: "customer",
+        // },
         {
           model: OrderDetail,
           as: "orderDetails",
@@ -157,8 +157,30 @@ app.post("/api/v1/orders", async (req, res) => {
 });
 
 
+function generateInvoiceNumber() {
+  const now = new Date();
 
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+
+  const hours = String(now.getHours()).padStart(2, "0");
+  const minutes = String(now.getMinutes()).padStart(2, "0");
+
+  return `SalaIT-${year}${month}${day}-${hours}${minutes}`;
+}
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
 });
+
+
+// Homework
+// Create table payment
+// ID number
+// method string // cash, card, aba_khqr
+// status string // PENDING, PAID, CANCELLED
+// paidAt date
+// remark text
+// amount decimal
+// paywayTranId string
