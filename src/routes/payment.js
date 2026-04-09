@@ -13,8 +13,6 @@ const router = app.Router();
 
 router.post("/:orderId", async (req, res) => {
   const { orderId } = req.params;
-  const { method = "ABA_PAYWAY" } = req.body;
-
   try {
     //1. Fetch order
     const order = await Order.findByPk(orderId, {
@@ -42,19 +40,11 @@ router.post("/:orderId", async (req, res) => {
         orderId: order.id,
         paywayTranId,
         amount: order.total,
-        method,
+        method: "ABA_PAYWAY",
         status: "PENDING",
       });
     } else {
       paywayTranId = payment.paywayTranId;
-    }
-
-    //4. Build PayWay payload (only if ABA_PAYWAY)
-    if (method !== "ABA_PAYWAY") {
-      return res.json({
-        message: "Payment initiated",
-        data: createdPayment,
-      });
     }
 
     const req_time = getReqTime();
@@ -200,8 +190,6 @@ router.post("/:tranId/check-transaction", async (req, res) => {
 
 router.post("/:orderId/generate-qr", async (req, res) => {
   const { orderId } = req.params;
-  const { method = "ABA_PAYWAY_QR" } = req.body;
-
   try {
     const order = await Order.findByPk(orderId, {
       include: [
@@ -226,7 +214,7 @@ router.post("/:orderId/generate-qr", async (req, res) => {
         orderId: order.id,
         paywayTranId,
         amount: order.total,
-        method,
+        method: "ABA_PAYWAY_QR",
         status: "PENDING",
       });
     } else {
