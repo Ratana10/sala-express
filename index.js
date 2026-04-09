@@ -2,6 +2,7 @@ const express = require("express");
 const db = require("./models");
 const path = require("path");
 const cors = require("cors");
+require('dotenv').config();
 
 const authRoute = require("./src/routes/auth");
 const customerRoute = require("./src/routes/customer");
@@ -9,6 +10,7 @@ const userRoute = require("./src/routes/user");
 const productRoute = require("./src/routes/product");
 const orderRoute = require("./src/routes/order");
 const categoryRoute = require("./src/routes/category");
+const paymentRoute = require("./src/routes/payment");
 
 const fileUpload = require("express-fileupload");
 
@@ -65,6 +67,7 @@ app.use("/api/v1/users", authMiddleware, userRoute);
 app.use("/api/v1/products", authMiddleware, productRoute);
 app.use("/api/v1/orders", authMiddleware, orderRoute);
 app.use("/api/v1/categories", authMiddleware ,categoryRoute);
+app.use("/api/v1/payments", authMiddleware ,paymentRoute);
 
 app.post("/api/v1/orders", async (req, res) => {
   try {
