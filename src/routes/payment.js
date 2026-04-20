@@ -5,7 +5,10 @@ const {
   getReqTime,
   encodeBase64,
   buildPurchaseHash,
+  buildCheckTransactionHash,
 } = require("../utils/payway");
+const { default: axios } = require("axios");
+
 
 const router = app.Router();
 
@@ -60,7 +63,7 @@ router.post("/:orderId", async (req, res) => {
     );
 
     paywayItems = encodeBase64(paywayItems);
-    const encodedReturnUrl = `${process.env.FRONTEND_URL}/admin/pos`;
+    const encodedReturnUrl = `${process.env.FRONTEND_URL}/admin/return?paywayTranId=${paywayTranId}`;
 
     const paymentPayload = {
       merchant_id: process.env.ABA_PAYWAY_MERCHANT_ID,
@@ -78,7 +81,7 @@ router.post("/:orderId", async (req, res) => {
       payment_option: "abapay_khqr",
       return_url: encodedReturnUrl,
       cancel_url: `${process.env.FRONTEND_URL}/admin/pos`,
-      continue_success_url: `${process.env.FRONTEND_URL}/admin/pos`,
+      continue_success_url: `${process.env.FRONTEND_URL}/admin/pos?paywayTranId=${paywayTranId}`,
       currency: "USD",
       payment_gate: 0,
     };
@@ -103,6 +106,89 @@ router.post("/:orderId", async (req, res) => {
     });
   } catch (error) {
     console.error("Error", error);
+  }
+});
+
+
+router.post("/:tranId/check", async (req, res) => {
+  try {
+    const { tranId } = req.params;
+
+    const payment = await Payment.findOne({
+      where: { paywayTranId: tranId },
+    });
+
+    if (!payment) {
+      return res.status(404).json({
+        message: "Payment not found",
+      });
+    }
+
+    const req_time = getReqTime();
+    const merchant_id = process.env.ABA_PAYWAY_MERCHANT_ID;
+    const tran_id = payment.paywayTranId;
+
+    const hash = buildCheckTransactionHash({
+      req_time,
+      merchant_id,
+      tran_id,
+    });
+
+    const response = await axios.post(
+      `${process.env.ABA_PAYWAY_BASE_URL}/api/payment-gateway/v1/payments/check-transaction-2`,
+      {
+        req_time,
+        merchant_id,
+        tran_id,
+        hash,
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      },
+    );
+
+    const abaData = response.data;
+    const statusCode = abaData?.status?.code;
+    const paymentStatusCode = abaData?.data?.payment_status_code;
+    const paymentStatus = abaData?.data?.payment_status;
+
+    if (statusCode == "00") {
+      if (paymentStatusCode === 0 && paymentStatus === "APPROVED") {
+        payment.status = "PAID";
+        payment.paidAt = new Date();
+      } else if (
+        paymentStatus === "DECLINED" ||
+        paymentStatus === "FAILED" ||
+        paymentStatusCode !== 0
+      ) {
+        payment.status = "FAILED";
+      } else {
+        payment.status = "PENDING";
+      }
+
+      payment.remark = JSON.stringify(abaData);
+      await payment.save();
+    }
+
+    return res.json({
+      message: "Transaction checked successfully",
+      data: {
+        localPayment: payment,
+        aba: abaData,
+      },
+    });
+  } catch (error) {
+    console.error(
+      "Check transaction error:",
+      error?.response?.data || error.message,
+    );
+
+    return res.status(500).json({
+      message: "Failed to check transaction",
+      error: error?.response?.data || error.message,
+    });
   }
 });
 
