@@ -1,17 +1,20 @@
 const app = require("express");
+const axios = require("axios");
+
 const { Payment, Customer, Order, OrderDetail } = require("../../models");
 const { Op } = require("sequelize");
 const {
   getReqTime,
   encodeBase64,
   buildPurchaseHash,
+  buildCheckTransactionHash,
 } = require("../utils/payway");
 
 const router = app.Router();
 
 // Create payment
 router.post("/:orderId", async (req, res) => {
-  console.log("FONTEND_URL", process.env.FRONTEND_URL)
+  console.log("FONTEND_URL", process.env.FRONTEND_URL);
   const { orderId } = req.params;
   try {
     // 1. Fetch order
@@ -78,7 +81,7 @@ router.post("/:orderId", async (req, res) => {
       payment_option: "abapay_khqr",
       return_url: encodedReturnUrl,
       cancel_url: `${process.env.FRONTEND_URL}/admin/pos`,
-      continue_success_url: `${process.env.FRONTEND_URL}/admin/pos`,
+      continue_success_url: `${process.env.FRONTEND_URL}/admin/pos?tranId=${paywayTranId}`,
       currency: "USD",
       payment_gate: 0,
     };
@@ -101,6 +104,73 @@ router.post("/:orderId", async (req, res) => {
         },
       },
     });
+  } catch (error) {
+    console.error("Error", error);
+  }
+});
+
+router.post("/:tranId/check", async (req, res) => {
+  try {
+    const { tranId } = req.params;
+
+    const payment = await Payment.findOne({
+      where: { paywayTranId: tranId },
+    });
+
+    if (!payment) {
+      return res.status(404).json({
+        message: "Payment not found",
+      });
+    }
+
+    const req_time = getReqTime();
+    const merchant_id = process.env.ABA_PAYWAY_MERCHANT_ID;
+    const tran_id = payment.paywayTranId;
+
+    const hash = buildCheckTransactionHash({ req_time, merchant_id, tran_id });
+
+    const payload = {
+      req_time,
+      merchant_id,
+      tran_id,
+      hash,
+    };
+    const response = await axios.post(
+      `${process.env.ABA_PAYWAY_BASE_URL}/api/payment-gateway/v1/payments/check-transaction-2`,
+      payload,
+    );
+    console.log("response from ABA", response.data);
+
+    const abaData = response.data;
+    const statusCode = abaData?.status?.code;
+    const paymentStatusCode = abaData?.data?.payment_status_code;
+    const paymentStatus = abaData?.data?.payment_status;
+
+    if (statusCode == "00") {
+      if (paymentStatusCode === 0 && paymentStatus === "APPROVED") {
+        payment.status = "PAID";
+        payment.paidAt =abaData?.data?.transaction_date;
+      } else if (
+        paymentStatus === "DECLINED" ||
+        paymentStatus === "FAILED" ||
+        paymentStatusCode !== 0
+      ) {
+        payment.status = "FAILED";
+      } else {
+        payment.status = "PENDING";
+      }
+
+      payment.remark = JSON.stringify(abaData);
+      await payment.save();
+    }
+
+    return res.json({
+      message: "Payment checked successfully",
+      data: {
+        payment: payment,
+        aba: abaData
+      }
+    })
   } catch (error) {
     console.error("Error", error);
   }

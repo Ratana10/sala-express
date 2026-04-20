@@ -47,8 +47,14 @@ const encodeBase64 = (url) => {
   return Buffer.from(url).toString("base64");
 };
 
+function buildCheckTransactionHash({ req_time, merchant_id, tran_id }) {
+  const raw = req_time + merchant_id + tran_id;
+  return signPayWay(raw);
+}
+
 module.exports ={
   getReqTime,
   buildPurchaseHash,
   encodeBase64,
+  buildCheckTransactionHash
 }
