@@ -2,7 +2,7 @@ const express = require("express");
 const db = require("./models");
 const path = require("path");
 const cors = require("cors");
-require("dotenv").config();
+require('dotenv').config();
 
 const authRoute = require("./src/routes/auth");
 const customerRoute = require("./src/routes/customer");
@@ -66,8 +66,8 @@ app.use("/api/v1/customers", authMiddleware, customerRoute);
 app.use("/api/v1/users", authMiddleware, userRoute);
 app.use("/api/v1/products", authMiddleware, productRoute);
 app.use("/api/v1/orders", authMiddleware, orderRoute);
-app.use("/api/v1/categories", authMiddleware, categoryRoute);
-app.use("/api/v1/payments", authMiddleware, paymentRoute);
+app.use("/api/v1/categories", authMiddleware ,categoryRoute);
+app.use("/api/v1/payments", authMiddleware ,paymentRoute);
 
 app.post("/api/v1/orders", async (req, res) => {
   try {
@@ -112,7 +112,7 @@ app.post("/api/v1/orders", async (req, res) => {
     }
 
     console.log("OrderDetails", orderDetailsData);
-    const orderNumber = generateInvoiceNumber();
+    const orderNumber = generateInvoiceNumber()
     // Create order into db
     const createdOrder = await Order.create({
       customerId: 0,
@@ -159,6 +159,7 @@ app.post("/api/v1/orders", async (req, res) => {
   }
 });
 
+
 function generateInvoiceNumber() {
   const now = new Date();
 
@@ -172,15 +173,10 @@ function generateInvoiceNumber() {
   return `SalaIT-${year}${month}${day}-${hours}${minutes}`;
 }
 
-app.get("/health", (req, res) => {
-  return res.json({
-    message: "OK",
-  });
-});
-
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
 });
+
 
 // Homework
 // Create table payment
