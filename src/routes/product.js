@@ -1,9 +1,11 @@
 const app = require("express");
-const { v4: uuidv4 } = require("uuid");
-const fs = require("fs");
-const path = require("path");
 const { Product, ProductImage, Category } = require("../../models");
 const { Op, fn, col, where } = require("sequelize");
+const multer = require("multer");
+
+const { storage, cloudinary } = require("../../src/storage/storage");
+
+const upload = multer({ storage });
 
 const router = app.Router();
 
@@ -48,7 +50,7 @@ router.get("/", async (req, res) => {
         {
           model: ProductImage,
           as: "productImages",
-          attributes: ["id", "productId", "imageUrl", "fileName"],
+          attributes: ["id", "productId", "imageUrl", "fileName", "publicId"],
         },
       ],
     });
@@ -138,12 +140,10 @@ router.put("/:id", async (req, res) => {
 });
 
 // Image upload
-router.post("/:id/upload", async (req, res) => {
+router.post("/:id/upload", upload.single("file"), async (req, res) => {
   try {
-    // const file = req.files.file;
-    // const productId = req.files.productId
+    const file = req.file;
 
-    const { file } = req.files;
     const productId = req.params.id;
 
     // validate product id
@@ -156,30 +156,21 @@ router.post("/:id/upload", async (req, res) => {
 
     console.log("File", file);
 
-    // UUI + file extension
-    const fileName = `${uuidv4()}${path.extname(file.name)}`;
-
-    //  Upload file to folder uploads/products
-    //  Create file upload path
-    const uploadPath = path.join(process.cwd(), "uploads/products", fileName);
-
-    await file.mv(uploadPath);
-
-    // Domain + fileName // domain.com/uploads/products/9871923712.png
-    const domain = `${req.protocol}://${req.get("host")}`;
-    const imageUrl = `${domain}/uploads/products/${fileName}`;
-
     const savedImage = await ProductImage.create({
       productId,
-      imageUrl,
-      fileName: file.name,
+      imageUrl: file.path,
+      fileName: file.originalname,
+      publicId: file.filename,
     });
 
     res.json({
       message: "Upload image successfully",
       data: savedImage,
     });
-  } catch (error) {}
+  } catch (error) {
+    console.log("Upload image error:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
 });
 
 router.get("/images/:imageId/download", async (req, res) => {
@@ -188,58 +179,42 @@ router.get("/images/:imageId/download", async (req, res) => {
 
     const image = await ProductImage.findByPk(imageId);
     if (!image) {
-      res.json({
+      return res.status(404).json({
         message: `Product image id=${imageId} not found`,
       });
     }
 
-    const fileName = image.imageUrl.split("/").pop();
-    console.log("File name", fileName);
-
-    const filePath = path.join(process.cwd(), "uploads/products", fileName);
-
-    if (!fs.existsSync(filePath)) {
-      res.json({
-        message: "File not found",
-      });
-    }
-
-    console.log("Image data", image);
-    res.download(filePath, image.fileName);
-  } catch (error) {}
+    return res.redirect(image.imageUrl);
+  } catch (error) {
+    console.log("Download image error:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
 });
 
 router.delete("/images/:imageId", async (req, res) => {
-  const { imageId } = req.params;
+  try {
+    const { imageId } = req.params;
 
- const image = await ProductImage.findOne({
-    where: {
-      id: imageId
+    const image = await ProductImage.findOne({
+      where: { id: imageId },
+    });
+
+    if (!image) {
+      return res.status(404).json({
+        message: `Product Image id=${imageId} not found`,
+      });
     }
-  })
 
-  if(!image){
-    return res(404).json({
-      message: `Product Image id=${imageId} not found`
-    })
+    await cloudinary.uploader.destroy(image.publicId);
+    await image.destroy();
+
+    return res.json({
+      message: "Product Image deleted successfully",
+    });
+  } catch (error) {
+    console.log("Delete image error:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
-
-  // remove image from folder uploads
-  const fileName = image.imageUrl.split("/").pop()
-
-  const filePath = path.join(process.cwd(), "uploads/products", fileName)
-
-  if(fs.existsSync(filePath)){
-    fs.unlinkSync(filePath)
-  }
-
-  // remove data from db
-  await image.destroy()
-
-  return res.json({
-    message: "Product Image deleted successfully"
-  })
-
 });
 
 module.exports = router;

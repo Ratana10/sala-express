@@ -12,7 +12,6 @@ const orderRoute = require("./src/routes/order");
 const categoryRoute = require("./src/routes/category");
 const paymentRoute = require("./src/routes/payment");
 
-const fileUpload = require("express-fileupload");
 
 const authMiddleware = require("./src/middlewares/authMiddleware");
 
@@ -44,12 +43,6 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 app.use(express.json());
-app.use(
-  fileUpload({
-    limits: { fileSize: 30 * 1024 * 1024 }, // 30MB
-    createParentPath: true,
-  }),
-);
 
 app.use(
   "/uploads/products",
