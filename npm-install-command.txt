@@ -1,1 +1,9 @@
 npm install  cloudinary multer multer-storage-cloudinary dotenv 
+
+
+get chat id
+ 1. Create a bot — message @BotFather on Telegram, run /newbot, copy the token.
+  2. Get your group chat ID:                                                                                                              
+    - Add the bot to your group
+    - Send any message in the group                                                                                                       
+    - Visit https://api.telegram.org/bot<YOUR_TOKEN>/getUpdates and find "chat":{"id": -123456789} — the negative number

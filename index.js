@@ -15,6 +15,7 @@ const categoryRoute = require("./src/routes/category");
 const paymentRoute = require("./src/routes/payment");
 
 const authMiddleware = require("./src/middlewares/authMiddleware");
+const { sendOrderNotification } = require("./src/utils/telegram");
 
 const app = express();
 const port = 3000;
@@ -152,6 +153,10 @@ app.post("/api/v1/orders", async (req, res) => {
       message: "Order completed",
       data: completedOrder,
     });
+
+    sendOrderNotification(completedOrder, completedOrder.orderDetails).catch((err) =>
+      console.error("Telegram notification failed:", err.message)
+    );
   } catch (error) {
     console.log("Error", error);
   }
