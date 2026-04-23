@@ -4,6 +4,8 @@ const path = require("path");
 const cors = require("cors");
 require('dotenv').config();
 
+
+
 const authRoute = require("./src/routes/auth");
 const customerRoute = require("./src/routes/customer");
 const userRoute = require("./src/routes/user");
@@ -11,8 +13,6 @@ const productRoute = require("./src/routes/product");
 const orderRoute = require("./src/routes/order");
 const categoryRoute = require("./src/routes/category");
 const paymentRoute = require("./src/routes/payment");
-
-const fileUpload = require("express-fileupload");
 
 const authMiddleware = require("./src/middlewares/authMiddleware");
 
@@ -45,17 +45,7 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 app.use(express.json());
-app.use(
-  fileUpload({
-    limits: { fileSize: 30 * 1024 * 1024 }, // 30MB
-    createParentPath: true,
-  }),
-);
 
-app.use(
-  "/uploads/products",
-  express.static(path.join(process.cwd(), "uploads/products")),
-);
 
 db.sequelize
   .authenticate()
